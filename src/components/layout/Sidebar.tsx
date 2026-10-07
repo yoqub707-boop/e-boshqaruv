@@ -9,7 +9,6 @@ import {
   Users,
   Building2,
   Leaf,
-  Target,
   ChevronDown,
   ChevronRight,
   ChevronLeft,
@@ -33,20 +32,20 @@ import {
   Shield,
   Menu,
   X,
+  User,
+  Settings,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
-// Menyu element turi
 interface MenuItem {
   id: string;
   label: string;
   icon: React.ReactNode;
   href?: string;
   children?: MenuItem[];
-  requiredRole?: string[]; // Faqat shu rollar ko'rishi mumkin
+  requiredRole?: string[];
 }
 
-// Menyu tuzilmasi
 const menuItems: MenuItem[] = [
   {
     id: 'dashboard',
@@ -179,17 +178,22 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    id: 'execution',
-    label: 'Aqlli ijro',
-    icon: <Target size={20} />,
-    href: '/execution',
-  },
-  {
     id: 'users',
     label: 'Foydalanuvchilar',
     icon: <Shield size={20} />,
     href: '/users',
-    requiredRole: ['MODERATOR'],
+  },
+  {
+    id: 'profile',
+    label: 'Mening profilim',
+    icon: <User size={20} />,
+    href: '/profile',
+  },
+  {
+    id: 'settings',
+    label: 'Tizim sozlamalari',
+    icon: <Settings size={20} />,
+    href: '/settings',
   },
 ];
 
@@ -201,9 +205,8 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['economy', 'social']);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['economy', 'social', 'construction', 'agriculture']);
 
-  // Menyu guruhini ochish/yopish
   const toggleMenu = (menuId: string) => {
     setExpandedMenus(prev =>
       prev.includes(menuId)
@@ -212,18 +215,15 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
     );
   };
 
-  // Menyu elementini ko'rsatish (rol tekshiruvi bilan)
   const shouldShowItem = (item: MenuItem): boolean => {
     if (!item.requiredRole) return true;
     return item.requiredRole.includes(userRole);
   };
 
-  // Aktiv yo'lni tekshirish
   const isActive = (href: string): boolean => {
     return pathname === href || pathname.startsWith(href + '/');
   };
 
-  // Menyu elementini render qilish
   const renderMenuItem = (item: MenuItem, isChild = false) => {
     if (!shouldShowItem(item)) return null;
 
@@ -281,7 +281,6 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
 
   const sidebarContent = (
     <>
-      {/* Logo */}
       <div className={clsx(
         'flex items-center gap-3 px-4 py-5 border-b border-gray-700/50',
         collapsed && 'justify-center px-2'
@@ -297,12 +296,10 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
         )}
       </div>
 
-      {/* Menyu */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {menuItems.map(item => renderMenuItem(item))}
       </nav>
 
-      {/* Yig'ish tugmasi */}
       <div className="p-3 border-t border-gray-700/50">
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -323,7 +320,6 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
 
   return (
     <>
-      {/* Mobil menyu tugmasi */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-gray-900 text-white shadow-lg"
@@ -331,7 +327,6 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
         {mobileOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Mobil overlay */}
       {mobileOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-40"
@@ -339,7 +334,6 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
         />
       )}
 
-      {/* Desktop Sidebar */}
       <aside
         className={clsx(
           'fixed top-0 left-0 h-screen bg-[#0f172a] flex flex-col z-40 transition-all duration-300',
@@ -350,7 +344,6 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
         {sidebarContent}
       </aside>
 
-      {/* Mobil Sidebar */}
       <aside
         className={clsx(
           'fixed top-0 left-0 h-screen bg-[#0f172a] flex flex-col z-40 w-[260px] transition-transform duration-300 lg:hidden',
