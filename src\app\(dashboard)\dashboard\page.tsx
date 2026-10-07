@@ -252,7 +252,7 @@ export default function DashboardPage() {
             unit="ta obyekt"
           />
           <ProgressBar
-            label="\"Yashil makon\" daraxt ekish"
+            label="Yashil makon daraxt ekish"
             planned={totalTreesPlanned || 50000}
             actual={totalTreesPlanted || 42500}
             unit="tup"
