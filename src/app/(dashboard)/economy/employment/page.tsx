@@ -1,52 +1,113 @@
-"use client";
+'use client';
 
 import React from 'react';
-import { DataTable } from '@/components/DataTable';
-import { KpiCard } from '@/components/KpiCard';
-import { StatsBarChart } from '@/components/StatsBarChart';
+import { Briefcase, UserCheck, TrendingUp, AlertCircle } from 'lucide-react';
+import DataTable from '@/components/common/DataTable';
+import KpiCard from '@/components/dashboard/KpiCard';
+import { StatsBarChart } from '@/components/dashboard/StatsChart';
 
 const columns = [
-  { header: 'Sektor', accessor: 'sector' },
-  { header: 'Reja (yangi ish o\'rinlari)', accessor: 'plan' },
-  { header: 'Haqiqiy', accessor: 'actual' },
-  { header: 'Bajarilish (%)', accessor: 'progress' },
+  { key: 'sector', label: 'Iqtisodiy soha / Sektor', sortable: true },
+  {
+    key: 'plannedJobs',
+    label: 'Reja (yangi ish o\'rni)',
+    sortable: true,
+    render: (val: number) => val.toLocaleString('uz-UZ'),
+  },
+  {
+    key: 'actualJobs',
+    label: 'Haqiqatda yaratildi',
+    sortable: true,
+    render: (val: number) => val.toLocaleString('uz-UZ'),
+  },
+  {
+    key: 'executionRate',
+    label: 'Bajarilish %',
+    sortable: true,
+    render: (val: number) => (
+      <span className={`badge ${val >= 100 ? 'badge-success' : val >= 90 ? 'badge-info' : 'badge-warning'}`}>
+        {val}%
+      </span>
+    ),
+  },
 ];
 
-const data = [
-  { sector: 'Kichik biznes', plan: '150,000', actual: '145,000', progress: '96.6%' },
-  { sector: 'Xizmat ko\'rsatish', plan: '200,000', actual: '210,000', progress: '105%' },
-  { sector: 'Qishloq xo\'jaligi', plan: '100,000', actual: '98,000', progress: '98%' },
-  { sector: 'Sanoat', plan: '80,000', actual: '82,000', progress: '102.5%' },
+const employmentData = [
+  { id: 1, sector: "Kichik biznes va tadbirkorlik", plannedJobs: 1500, actualJobs: 1450, executionRate: 96.6 },
+  { id: 2, sector: "Xizmat ko'rsatish va servis", plannedJobs: 2000, actualJobs: 2100, executionRate: 105.0 },
+  { id: 3, sector: "Qishloq xo'jaligi va agrosanoat", plannedJobs: 1000, actualJobs: 980, executionRate: 98.0 },
+  { id: 4, sector: "Sanoat va ishlab chiqarish", plannedJobs: 800, actualJobs: 820, executionRate: 102.5 },
+  { id: 5, sector: "Qurilish va infratuzilma", plannedJobs: 600, actualJobs: 570, executionRate: 95.0 },
 ];
 
-const barData = [
-  { name: 'Kichik biznes', plan: 150000, actual: 145000 },
-  { name: 'Xizmat ko\'rsatish', plan: 200000, actual: 210000 },
-  { name: 'Qishloq xo\'jaligi', plan: 100000, actual: 98000 },
-  { name: 'Sanoat', plan: 80000, actual: 82000 },
+const chartData = [
+  { soh: "Kichik biznes", reja: 1500, haqiqiy: 1450 },
+  { soh: "Xizmat", reja: 2000, haqiqiy: 2100 },
+  { soh: "Qishloq xo'j.", reja: 1000, haqiqiy: 980 },
+  { soh: "Sanoat", reja: 800, haqiqiy: 820 },
+  { soh: "Qurilish", reja: 600, haqiqiy: 570 },
 ];
 
 export default function EmploymentPage() {
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Iqtisodiyot: Bandlik</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Umumiy bandlik darajasi" value="92.5%" trend="+1.5%" />
-        <KpiCard title="Yangi ish o'rinlari (Jami)" value="535,000" trend="+4.2%" />
-        <KpiCard title="Ishsizlar soni" value="1,200,000" trend="-2.1%" />
-        <KpiCard title="O'rtacha oylik maosh" value="3.5 mln so'm" trend="+8.5%" />
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Iqtisodiyot: Bandlik va Yangi ish o&apos;rinlari</h1>
+        <p className="text-sm text-gray-500 mt-1">Hududda yangi ish o&apos;rinlarini yaratish va bandlik ko&apos;rsatkichlari</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Sektorlar kesimida yangi ish o'rinlari</h2>
-          <DataTable columns={columns} data={data} />
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Reja va haqiqiy ko'rsatkichlar</h2>
-          <StatsBarChart data={barData} />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="Umumiy bandlik darajasi"
+          value="93.8%"
+          subtitle="Iqtisodiy faol aholi"
+          icon={<UserCheck size={24} />}
+          color="green"
+          trend={{ value: 1.5, label: "o'tgan chorakka nisbatan" }}
+        />
+        <KpiCard
+          title="Yangi ish o'rinlari"
+          value="5,920 ta"
+          subtitle="Yillik jamg'arilgan"
+          icon={<Briefcase size={24} />}
+          color="blue"
+          trend={{ value: 4.2, label: "o'sish" }}
+        />
+        <KpiCard
+          title="O'rtacha oylik maosh"
+          value="3.8 mln so'm"
+          subtitle="Rasmiy sektor"
+          icon={<TrendingUp size={24} />}
+          color="purple"
+          trend={{ value: 8.5, label: "inflyatsiyadan yuqori" }}
+        />
+        <KpiCard
+          title="Ish izlayotganlar"
+          value="1,420 kishi"
+          subtitle="Bandlik markazida"
+          icon={<AlertCircle size={24} />}
+          color="orange"
+          trend={{ value: -3.1, label: "kamayish" }}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <DataTable
+          title="Sektorlar kesimida ish o'rinlari"
+          columns={columns}
+          data={employmentData}
+          searchPlaceholder="Sohani qidirish..."
+          onExport={() => alert('Excel ga eksport qilinmoqda...')}
+        />
+        <StatsBarChart
+          title="Reja va haqiqiy yaratilgan ish o'rinlari"
+          data={chartData}
+          xAxisKey="soh"
+          bars={[
+            { dataKey: 'reja', name: 'Reja', color: '#1e40af' },
+            { dataKey: 'haqiqiy', name: 'Haqiqiy', color: '#16a34a' },
+          ]}
+        />
       </div>
     </div>
   );

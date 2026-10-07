@@ -1,52 +1,118 @@
-import React from 'react';
-import { DataTable } from '@/components/ui/data-table';
-import { KpiCard } from '@/components/ui/kpi-card';
+'use client';
 
-const data = [
-  { id: 1, nomi: "20-maktab binosini ta'mirlash", pudratchi: "Qurilish Invest MCHJ", boshlanish: "2023-05-10", byudjet: "1.2 mlrd so'm", holati: "Jarayonda" },
-  { id: 2, nomi: "Yangi poliklinika qurilishi", pudratchi: "Medical Build XK", boshlanish: "2023-01-15", byudjet: "3.5 mlrd so'm", holati: "Yakunlangan" },
-  { id: 3, nomi: "Istirohat bog'i", pudratchi: "Green Park MCHJ", boshlanish: "2023-08-01", byudjet: "800 mln so'm", holati: "Kechikmoqda" },
-];
+import React from 'react';
+import { HardHat, Building2, CheckCircle2, Clock } from 'lucide-react';
+import DataTable from '@/components/common/DataTable';
+import KpiCard from '@/components/dashboard/KpiCard';
+import ProgressBar from '@/components/dashboard/ProgressBar';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'Yakunlangan':
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">{status}</span>;
+      return <span className="badge badge-success">{status}</span>;
     case 'Jarayonda':
-      return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">{status}</span>;
+      return <span className="badge badge-info">{status}</span>;
     case 'Kechikmoqda':
-      return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">{status}</span>;
+      return <span className="badge badge-danger">{status}</span>;
     default:
-      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">{status}</span>;
+      return <span className="badge">{status}</span>;
   }
 };
 
 const columns = [
-  { header: "Obyekt nomi", accessorKey: "nomi" },
-  { header: "Pudratchi", accessorKey: "pudratchi" },
-  { header: "Boshlanish vaqti", accessorKey: "boshlanish" },
-  { header: "Byudjet", accessorKey: "byudjet" },
+  { key: 'name', label: 'Obyekt nomi', sortable: true },
+  { key: 'contractor', label: 'Pudratchi tashkilot', sortable: true },
+  { key: 'startDate', label: 'Boshlangan sana', sortable: true },
   {
-    header: "Holati",
-    accessorKey: "holati",
-    cell: ({ row }: any) => getStatusBadge(row.original.holati)
-  }
+    key: 'budget',
+    label: 'Byudjet',
+    sortable: true,
+    render: (val: number) => `${(val / 1000000000).toFixed(2)} mlrd so'm`,
+  },
+  {
+    key: 'progress',
+    label: 'Bajarilish %',
+    sortable: true,
+    render: (val: number) => (
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold">{val}%</span>
+      </div>
+    ),
+  },
+  {
+    key: 'status',
+    label: 'Holati',
+    sortable: true,
+    render: (val: string) => getStatusBadge(val),
+  },
+];
+
+const projectData = [
+  { id: 1, name: "20-umumiy ta'lim maktabi binosini mukammal ta'mirlash", contractor: "Binokor MCHJ", startDate: "10.05.2023", budget: 4500000000, progress: 85, status: "Jarayonda" },
+  { id: 2, name: "Yangi ko'p tarmoqli tuman poliklinikasi qurilishi", contractor: "Shahar Qurilish AJ", startDate: "15.01.2023", budget: 8200000000, progress: 100, status: "Yakunlangan" },
+  { id: 3, name: "Markaziy istirohat bog'ini obodonlashtirish", contractor: "Yashil Diyor UK", startDate: "01.08.2023", budget: 2100000000, progress: 45, status: "Kechikmoqda" },
+  { id: 4, name: "5-sonli maktabgacha ta'lim muassasasi filiali", contractor: "Nurli Qurilish XK", startDate: "20.02.2024", budget: 3200000000, progress: 60, status: "Jarayonda" },
+  { id: 5, name: "Ichimlik suvi tarmog'ini tortish (Do'stlik MFY)", contractor: "Suv Ta'minot MCHJ", startDate: "05.03.2024", budget: 1800000000, progress: 95, status: "Jarayonda" },
 ];
 
 export default function ConstructionProjectsPage() {
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Qurilish obyektlari va loyihalar</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <KpiCard title="Jami obyektlar" value="24" trend="+3" />
-        <KpiCard title="Yakunlangan" value="8" trend="+2" />
-        <KpiCard title="Umumiy byudjet" value="45.6 mlrd" trend="-2%" />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Qurilish obyektlari va investitsiya loyihalari</h1>
+        <p className="text-sm text-gray-500 mt-1">Davlat dasturlari doirasida amalga oshirilayotgan qurilish-ta&apos;mirlash ishlari</p>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow">
-        <DataTable columns={columns} data={data} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="Jami obyektlar"
+          value="24 ta"
+          subtitle="Manzilli dastur bo'yicha"
+          icon={<HardHat size={24} />}
+          color="blue"
+        />
+        <KpiCard
+          title="Yakunlangan"
+          value="8 ta"
+          subtitle="Foydalanishga topshirildi"
+          icon={<CheckCircle2 size={24} />}
+          color="green"
+        />
+        <KpiCard
+          title="Jami byudjet"
+          value="45.6 mlrd"
+          subtitle="Ajratilgan mablag'"
+          icon={<Building2 size={24} />}
+          color="purple"
+        />
+        <KpiCard
+          title="Kechikayotgan"
+          value="3 ta"
+          subtitle="Nazoratga olingan"
+          icon={<Clock size={24} />}
+          color="red"
+        />
       </div>
+
+      <div className="card">
+        <h3 className="text-base font-semibold mb-4">Asosiy yo&apos;nalishlar bo&apos;yicha reja bajarilishi</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ProgressBar label="Ta'lim muassasalari ta'miri" planned={12000000000} actual={10500000000} unit="so'm" />
+          <ProgressBar label="Tibbiyot maskanlari qurilishi" planned={15000000000} actual={14200000000} unit="so'm" />
+          <ProgressBar label="Yo'l va infratuzilma" planned={10000000000} actual={8800000000} unit="so'm" />
+          <ProgressBar label="Ichimlik suvi tarmoqlari" planned={8600000000} actual={7400000000} unit="so'm" />
+        </div>
+      </div>
+
+      <DataTable
+        title="Qurilish loyihalari ro'yxati"
+        columns={columns}
+        data={projectData}
+        searchPlaceholder="Obyekt yoki pudratchini qidirish..."
+        onExport={() => alert('Excel ga eksport qilinmoqda...')}
+        onAdd={() => alert('Yangi loyiha kiritish')}
+        addLabel="Yangi obyekt"
+      />
     </div>
   );
 }

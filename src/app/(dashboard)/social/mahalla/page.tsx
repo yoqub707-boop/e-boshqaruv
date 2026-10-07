@@ -1,47 +1,105 @@
-import React from 'react';
-import { DataTable } from '@/components/ui/data-table';
-import { KpiCard } from '@/components/ui/kpi-card';
-import { ProgressBar } from '@/components/ui/progress-bar';
+'use client';
 
-const data = [
-  { id: 1, nomi: "Navbahor", rais: "Azizov Alisher", aholi: 3500, xonadonlar: 750, muammoli: 45 },
-  { id: 2, nomi: "Gulshan", rais: "Karimova Dildora", aholi: 4200, xonadonlar: 820, muammoli: 20 },
-  { id: 3, nomi: "Do'stlik", rais: "Toshmatov Vali", aholi: 2800, xonadonlar: 600, muammoli: 60 },
-  { id: 4, nomi: "Alisher Navoiy", rais: "Nazarov Bobur", aholi: 5100, xonadonlar: 1100, muammoli: 80 },
-  { id: 5, nomi: "O'zbekiston", rais: "Eshmurodov Jasur", aholi: 3900, xonadonlar: 780, muammoli: 35 },
-];
+import React from 'react';
+import { Home, Users, CheckCircle, AlertTriangle } from 'lucide-react';
+import DataTable from '@/components/common/DataTable';
+import KpiCard from '@/components/dashboard/KpiCard';
+import ProgressBar from '@/components/dashboard/ProgressBar';
 
 const columns = [
-  { header: "Mahalla nomi", accessorKey: "nomi" },
-  { header: "Rais", accessorKey: "rais" },
-  { header: "Aholi soni", accessorKey: "aholi" },
-  { header: "Xonadonlar", accessorKey: "xonadonlar" },
+  { key: 'name', label: 'Mahalla nomi', sortable: true },
+  { key: 'chairman', label: 'Mahalla raisi', sortable: true },
   {
-    header: "Muammoli xonadonlar",
-    accessorKey: "muammoli",
-    cell: ({ row }: any) => (
-      <div className="flex items-center gap-2">
-        <span className="w-8 text-sm">{row.original.muammoli}%</span>
-        <ProgressBar value={row.original.muammoli} />
-      </div>
-    )
-  }
+    key: 'population',
+    label: 'Aholi soni',
+    sortable: true,
+    render: (val: number) => val.toLocaleString('uz-UZ'),
+  },
+  {
+    key: 'households',
+    label: 'Xonadonlar soni',
+    sortable: true,
+    render: (val: number) => val.toLocaleString('uz-UZ'),
+  },
+  {
+    key: 'problemRate',
+    label: 'Murojaatlar hal etilishi',
+    sortable: true,
+    render: (val: number) => (
+      <span className={`badge ${val >= 95 ? 'badge-success' : val >= 90 ? 'badge-info' : 'badge-warning'}`}>
+        {val}%
+      </span>
+    ),
+  },
+];
+
+const mahallaData = [
+  { id: 1, name: "Navbahor", chairman: "Azizov Alisher", population: 5420, households: 1250, problemRate: 94.5 },
+  { id: 2, name: "Gulshan", chairman: "Karimova Dildora", population: 4800, households: 1100, problemRate: 98.0 },
+  { id: 3, name: "Do'stlik", chairman: "Toshmatov Vali", population: 6200, households: 1420, problemRate: 91.2 },
+  { id: 4, name: "Alisher Navoiy", chairman: "Nazarov Bobur", population: 7100, households: 1650, problemRate: 96.0 },
+  { id: 5, name: "O'zbekiston", chairman: "Eshmurodov Jasur", population: 5900, households: 1380, problemRate: 89.5 },
 ];
 
 export default function MahallaPage() {
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Mahallalar kesimida ijtimoiy holat</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <KpiCard title="Umumiy mahallalar" value="45" trend="+2%" />
-        <KpiCard title="Jami aholi soni" value="125,400" trend="+1.5%" />
-        <KpiCard title="Muammoli xonadonlar hal etildi" value="68%" trend="+5%" />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Mahallalar kesimida ijtimoiy holat</h1>
+        <p className="text-sm text-gray-500 mt-1">Mahalla fuqarolar yig&apos;inlari, aholi va xonadonlar monitoringi</p>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow">
-        <DataTable columns={columns} data={data} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="Jami mahallalar"
+          value="45 ta"
+          subtitle="Tuman bo'yicha"
+          icon={<Home size={24} />}
+          color="blue"
+        />
+        <KpiCard
+          title="Jami aholi"
+          value="287,450"
+          subtitle="Ro'yxatda mavjud"
+          icon={<Users size={24} />}
+          color="green"
+          trend={{ value: 2.3, label: "o'sish" }}
+        />
+        <KpiCard
+          title="Hal etilgan masalalar"
+          value="94.2%"
+          subtitle="Fuqarolar murojaatlari"
+          icon={<CheckCircle size={24} />}
+          color="teal"
+          trend={{ value: 5.0, label: "ijobiy natija" }}
+        />
+        <KpiCard
+          title="E'tiborga muhtoj"
+          value="182 ta"
+          subtitle="Ijtimoiy daftarlarda"
+          icon={<AlertTriangle size={24} />}
+          color="orange"
+          trend={{ value: -12.0, label: "kamaygan" }}
+        />
       </div>
+
+      <div className="card">
+        <h3 className="text-base font-semibold mb-4">Mahalla xonadonlari bo&apos;yicha ijtimoiy ko&apos;mak choralari</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ProgressBar label="Ijtimoiy reyestr yordamlari" planned={1200} actual={1140} unit="ta" />
+          <ProgressBar label="Bandlik ta'minlangan oilalar" planned={850} actual={810} unit="ta" />
+          <ProgressBar label="Kredit va subsidiya ajratilgan" planned={450} actual={435} unit="ta" />
+          <ProgressBar label="Tibbiy ko'rikdan o'tganlar" planned={6500} actual={6380} unit="nafar" />
+        </div>
+      </div>
+
+      <DataTable
+        title="Mahallalar ro'yxati va ko'rsatkichlari"
+        columns={columns}
+        data={mahallaData}
+        searchPlaceholder="Mahalla yoki raisni qidirish..."
+        onExport={() => alert('Excel ga eksport qilinmoqda...')}
+      />
     </div>
   );
 }
