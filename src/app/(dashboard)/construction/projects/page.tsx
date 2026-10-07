@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
-import { HardHat, Building2, CheckCircle2, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { HardHat, Building2, CheckCircle2, Clock, Plus, Edit, Trash2, X } from 'lucide-react';
 import DataTable from '@/components/common/DataTable';
 import KpiCard from '@/components/dashboard/KpiCard';
 import ProgressBar from '@/components/dashboard/ProgressBar';
+import { useData, ProjectItem } from '@/context/DataContext';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -19,76 +20,138 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-const columns = [
-  { key: 'name', label: 'Obyekt nomi', sortable: true },
-  { key: 'contractor', label: 'Pudratchi tashkilot', sortable: true },
-  { key: 'startDate', label: 'Boshlangan sana', sortable: true },
-  {
-    key: 'budget',
-    label: 'Byudjet',
-    sortable: true,
-    render: (val: number) => `${(val / 1000000000).toFixed(2)} mlrd so'm`,
-  },
-  {
-    key: 'progress',
-    label: 'Bajarilish %',
-    sortable: true,
-    render: (val: number) => (
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold">{val}%</span>
-      </div>
-    ),
-  },
-  {
-    key: 'status',
-    label: 'Holati',
-    sortable: true,
-    render: (val: string) => getStatusBadge(val),
-  },
-];
-
-const projectData = [
-  { id: 1, name: "20-umumiy ta'lim maktabi binosini mukammal ta'mirlash", contractor: "Binokor MCHJ", startDate: "10.05.2023", budget: 4500000000, progress: 85, status: "Jarayonda" },
-  { id: 2, name: "Yangi ko'p tarmoqli tuman poliklinikasi qurilishi", contractor: "Shahar Qurilish AJ", startDate: "15.01.2023", budget: 8200000000, progress: 100, status: "Yakunlangan" },
-  { id: 3, name: "Markaziy istirohat bog'ini obodonlashtirish", contractor: "Yashil Diyor UK", startDate: "01.08.2023", budget: 2100000000, progress: 45, status: "Kechikmoqda" },
-  { id: 4, name: "5-sonli maktabgacha ta'lim muassasasi filiali", contractor: "Nurli Qurilish XK", startDate: "20.02.2024", budget: 3200000000, progress: 60, status: "Jarayonda" },
-  { id: 5, name: "Ichimlik suvi tarmog'ini tortish (Do'stlik MFY)", contractor: "Suv Ta'minot MCHJ", startDate: "05.03.2024", budget: 1800000000, progress: 95, status: "Jarayonda" },
-];
-
 export default function ConstructionProjectsPage() {
+  const { projects, addProject, updateProject, deleteProject } = useData();
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<ProjectItem | null>(null);
+
+  const [name, setName] = useState('');
+  const [contractor, setContractor] = useState('');
+  const [startDate, setStartDate] = useState('01.01.2024');
+  const [budget, setBudget] = useState(3000000000);
+  const [progress, setProgress] = useState(50);
+  const [status, setStatus] = useState('Jarayonda');
+
+  const openAdd = () => {
+    setEditingItem(null);
+    setName('');
+    setContractor('');
+    setStartDate('01.01.2024');
+    setBudget(3000000000);
+    setProgress(50);
+    setStatus('Jarayonda');
+    setShowModal(true);
+  };
+
+  const openEdit = (item: ProjectItem) => {
+    setEditingItem(item);
+    setName(item.name);
+    setContractor(item.contractor);
+    setStartDate(item.startDate);
+    setBudget(item.budget);
+    setProgress(item.progress);
+    setStatus(item.status);
+    setShowModal(true);
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm("Ushbu qurilish loyihasini o'chirmoqchimisiz?")) {
+      deleteProject(id);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingItem) {
+      updateProject({ id: editingItem.id, name, contractor, startDate, budget, progress, status });
+    } else {
+      addProject({ name, contractor, startDate, budget, progress, status });
+    }
+    setShowModal(false);
+  };
+
+  const totalBudget = projects.reduce((s, p) => s + p.budget, 0);
+  const completedCount = projects.filter(p => p.status === 'Yakunlangan' || p.progress === 100).length;
+  const delayedCount = projects.filter(p => p.status === 'Kechikmoqda').length;
+
+  const columns = [
+    { key: 'name', label: 'Obyekt nomi', sortable: true },
+    { key: 'contractor', label: 'Pudratchi tashkilot', sortable: true },
+    { key: 'startDate', label: 'Boshlangan sana', sortable: true },
+    {
+      key: 'budget',
+      label: 'Byudjet',
+      sortable: true,
+      render: (val: number) => `${(val / 1000000000).toFixed(2)} mlrd so'm`,
+    },
+    {
+      key: 'progress',
+      label: 'Bajarilish %',
+      sortable: true,
+      render: (val: number) => (
+        <span className="font-semibold text-xs">{val}%</span>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Holati',
+      sortable: true,
+      render: (val: string) => getStatusBadge(val),
+    },
+    {
+      key: 'actions',
+      label: 'Amallar',
+      render: (_: any, row: ProjectItem) => (
+        <div className="flex items-center gap-2">
+          <button onClick={() => openEdit(row)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+            <Edit size={16} />
+          </button>
+          <button onClick={() => handleDelete(row.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Qurilish obyektlari va investitsiya loyihalari</h1>
-        <p className="text-sm text-gray-500 mt-1">Davlat dasturlari doirasida amalga oshirilayotgan qurilish-ta&apos;mirlash ishlari</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Qurilish obyektlari va investitsiya loyihalari</h1>
+          <p className="text-sm text-gray-500 mt-1">Davlat dasturlari doirasida amalga oshirilayotgan qurilish-ta&apos;mirlash ishlari</p>
+        </div>
+        <button onClick={openAdd} className="btn-primary">
+          <Plus size={16} /> Yangi obyekt kiritish
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Jami obyektlar"
-          value="24 ta"
-          subtitle="Manzilli dastur bo'yicha"
+          value={`${projects.length} ta`}
+          subtitle="Manzilli dastur"
           icon={<HardHat size={24} />}
           color="blue"
         />
         <KpiCard
           title="Yakunlangan"
-          value="8 ta"
+          value={`${completedCount} ta`}
           subtitle="Foydalanishga topshirildi"
           icon={<CheckCircle2 size={24} />}
           color="green"
         />
         <KpiCard
           title="Jami byudjet"
-          value="45.6 mlrd"
+          value={`${(totalBudget / 1000000000).toFixed(1)} mlrd`}
           subtitle="Ajratilgan mablag'"
           icon={<Building2 size={24} />}
           color="purple"
         />
         <KpiCard
           title="Kechikayotgan"
-          value="3 ta"
-          subtitle="Nazoratga olingan"
+          value={`${delayedCount} ta`}
+          subtitle="Nazoratda"
           icon={<Clock size={24} />}
           color="red"
         />
@@ -107,12 +170,61 @@ export default function ConstructionProjectsPage() {
       <DataTable
         title="Qurilish loyihalari ro'yxati"
         columns={columns}
-        data={projectData}
+        data={projects}
         searchPlaceholder="Obyekt yoki pudratchini qidirish..."
-        onExport={() => alert('Excel ga eksport qilinmoqda...')}
-        onAdd={() => alert('Yangi loyiha kiritish')}
+        onAdd={openAdd}
         addLabel="Yangi obyekt"
+        onExport={() => alert('Excel ga eksport qilinmoqda...')}
       />
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <h3 className="text-lg font-bold text-gray-900">{editingItem ? "Obyektni tahrirlash" : "Yangi qurilish obyekti"}</h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="form-label">Obyekt nomi</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Masalan: 32-maktab ta'miri" className="form-input" required />
+              </div>
+              <div>
+                <label className="form-label">Pudratchi tashkilot</label>
+                <input type="text" value={contractor} onChange={e => setContractor(e.target.value)} placeholder="Binokor MCHJ" className="form-input" required />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label">Boshlangan sana</label>
+                  <input type="text" value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="01.05.2024" className="form-input" required />
+                </div>
+                <div>
+                  <label className="form-label">Byudjet (so&apos;mda)</label>
+                  <input type="number" value={budget} onChange={e => setBudget(Number(e.target.value))} className="form-input" required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label">Bajarilish foizi (%)</label>
+                  <input type="number" min="0" max="100" value={progress} onChange={e => setProgress(Number(e.target.value))} className="form-input" required />
+                </div>
+                <div>
+                  <label className="form-label">Holati</label>
+                  <select value={status} onChange={e => setStatus(e.target.value)} className="form-input">
+                    <option value="Jarayonda">Jarayonda</option>
+                    <option value="Yakunlangan">Yakunlangan</option>
+                    <option value="Kechikmoqda">Kechikmoqda</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowModal(false)} className="btn-outline flex-1">Bekor qilish</button>
+                <button type="submit" className="btn-primary flex-1">Saqlash</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

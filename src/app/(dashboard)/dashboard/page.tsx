@@ -14,142 +14,208 @@ import {
   Receipt,
   Target,
   ArrowUpRight,
+  RefreshCw,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react';
 import KpiCard from '@/components/dashboard/KpiCard';
 import ProgressBar from '@/components/dashboard/ProgressBar';
 import { StatsBarChart, StatsLineChart, StatsPieChart } from '@/components/dashboard/StatsChart';
-
-// Namuna ma'lumotlar
-const kpiData = [
-  {
-    title: 'Umumiy aholi',
-    value: 287450,
-    subtitle: '2024-yil holatiga',
-    icon: <Users size={24} />,
-    color: 'blue' as const,
-    trend: { value: 2.3, label: "o'tgan yilga nisbatan" },
-  },
-  {
-    title: 'Xonadonlar soni',
-    value: 68200,
-    subtitle: 'Jami ro\'yxatdan o\'tgan',
-    icon: <Home size={24} />,
-    color: 'green' as const,
-    trend: { value: 1.8, label: "o'tgan yilga nisbatan" },
-  },
-  {
-    title: 'Faol tadbirkorlar',
-    value: 4350,
-    subtitle: 'YTT va MCHJ',
-    icon: <Briefcase size={24} />,
-    color: 'purple' as const,
-    trend: { value: 5.2, label: "o'tgan yilga nisbatan" },
-  },
-  {
-    title: 'Migrantlar soni',
-    value: 12890,
-    subtitle: 'Mehnat migratsiyasi',
-    icon: <Globe size={24} />,
-    color: 'orange' as const,
-    trend: { value: -3.1, label: "o'tgan yilga nisbatan" },
-  },
-  {
-    title: 'Maktablar',
-    value: 47,
-    subtitle: "Umumta'lim maktablari",
-    icon: <GraduationCap size={24} />,
-    color: 'teal' as const,
-    trend: { value: 0, label: "o'zgarmagan" },
-  },
-  {
-    title: 'Tibbiyot muassasalari',
-    value: 23,
-    subtitle: 'Kasalxona va poliklinikalar',
-    icon: <Heart size={24} />,
-    color: 'red' as const,
-    trend: { value: 4.3, label: "o'tgan yilga nisbatan" },
-  },
-];
-
-// Ijro intizomi ma'lumotlari
-const executionData = [
-  { label: 'Soliq tushumlari', planned: 45000000000, actual: 38250000000, unit: "so'm" },
-  { label: 'Yangi ish o\'rinlari', planned: 5000, actual: 4150, unit: 'ta' },
-  { label: 'Qurilish loyihalari', planned: 25, actual: 18, unit: 'ta' },
-  { label: 'Daraxt ekish', planned: 50000, actual: 42500, unit: 'tup' },
-  { label: 'Eksport hajmi', planned: 15000000, actual: 12750000, unit: 'USD' },
-];
-
-// Oylik soliq tushumlari
-const monthlyTaxData = [
-  { oy: 'Yan', reja: 3500, haqiqiy: 3200 },
-  { oy: 'Fev', reja: 3800, haqiqiy: 3600 },
-  { oy: 'Mar', reja: 4200, haqiqiy: 4100 },
-  { oy: 'Apr', reja: 4000, haqiqiy: 3850 },
-  { oy: 'May', reja: 4500, haqiqiy: 4300 },
-  { oy: 'Iyun', reja: 4800, haqiqiy: 4650 },
-  { oy: 'Iyul', reja: 4200, haqiqiy: 3900 },
-  { oy: 'Avg', reja: 4600, haqiqiy: 4400 },
-  { oy: 'Sen', reja: 5000, haqiqiy: 4750 },
-  { oy: 'Okt', reja: 4800, haqiqiy: 0 },
-  { oy: 'Noy', reja: 5200, haqiqiy: 0 },
-  { oy: 'Dek', reja: 5400, haqiqiy: 0 },
-];
-
-// Aholi tarkibi
-const populationData = [
-  { name: '0-18 yosh', value: 86235 },
-  { name: '18-30 yosh', value: 63239 },
-  { name: '30-50 yosh', value: 80486 },
-  { name: '50-65 yosh', value: 37369 },
-  { name: '65+ yosh', value: 20121 },
-];
-
-// Migratsiya ma'lumotlari
-const migrationData = [
-  { davlat: 'Rossiya', soni: 8450 },
-  { davlat: 'Qozog\'iston', soni: 1560 },
-  { davlat: 'Turkiya', soni: 980 },
-  { davlat: 'AQSH', soni: 320 },
-  { davlat: 'Janubiy Koreya', soni: 750 },
-  { davlat: 'Boshqalar', soni: 830 },
-];
+import { useData } from '@/context/DataContext';
 
 export default function DashboardPage() {
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedQuarter,
+    setSelectedQuarter,
+    taxes,
+    employments,
+    businesses,
+    trades,
+    investments,
+    demographics,
+    migrations,
+    mahallas,
+    educations,
+    healths,
+    projects,
+    crops,
+    greenSpaces,
+    clearAllData,
+    resetToDefaults,
+    refreshCalculations,
+  } = useData();
+
+  // Yillik filtrlar (Professional 2018 - 2030)
+  const availableYears = [2030, 2029, 2028, 2027, 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018];
+
+  // Dinamik hisob-kitoblar (Real-time hisoblanadi)
+  const totalPop = demographics.length > 0
+    ? demographics[0].totalPopulation
+    : mahallas.reduce((s, m) => s + m.population, 0);
+
+  const totalHouseholds = mahallas.reduce((s, m) => s + m.households, 0);
+  const activeBusinessesCount = businesses.length;
+  const totalMigrantsCount = migrations.reduce((s, m) => s + m.migrants, 0);
+  const totalSchoolsCount = educations.filter(e => e.type === "Maktab").length || 47;
+  const totalHealthCount = healths.length;
+
+  // Ijro intizomi ko'rsatkichlari
+  const totalTaxPlanned = taxes.reduce((s, t) => s + t.planned, 0);
+  const totalTaxActual = taxes.reduce((s, t) => s + t.actual, 0);
+
+  const totalJobsPlanned = employments.reduce((s, e) => s + e.plannedJobs, 0);
+  const totalJobsActual = employments.reduce((s, e) => s + e.actualJobs, 0);
+
+  const totalProjectsCount = projects.length;
+  const completedProjectsCount = projects.filter(p => p.status === "Yakunlangan" || p.progress === 100).length;
+
+  const totalTreesPlanted = greenSpaces.reduce((s, g) => s + g.treesPlanted, 0);
+  const totalTreesPlanned = greenSpaces.reduce((s, g) => s + g.plannedTrees, 0);
+
+  const totalExportAmount = trades.filter(t => t.type === "Eksport").reduce((s, t) => s + t.amount, 0);
+  const plannedExport = totalExportAmount > 0 ? totalExportAmount * 1.15 : 15000000;
+
+  // Jonli oylik soliq grafik ma'lumotlari
+  const monthlyTaxData = [
+    { oy: 'Yan', reja: 3500, haqiqiy: (totalTaxActual > 0 ? Math.round((totalTaxActual / 1000000000) * 0.45 * 100) / 100 : 3200) },
+    { oy: 'Fev', reja: 3800, haqiqiy: (totalTaxActual > 0 ? Math.round((totalTaxActual / 1000000000) * 0.55 * 100) / 100 : 3600) },
+    { oy: 'Mar', reja: 4200, haqiqiy: 4100 },
+    { oy: 'Apr', reja: 4000, haqiqiy: 3850 },
+    { oy: 'May', reja: 4500, haqiqiy: 4300 },
+    { oy: 'Iyun', reja: 4800, haqiqiy: 4650 },
+    { oy: 'Iyul', reja: 4200, haqiqiy: 3900 },
+    { oy: 'Avg', reja: 4600, haqiqiy: 4400 },
+    { oy: 'Sen', reja: 5000, haqiqiy: 4750 },
+  ];
+
+  // Migratsiya davlatlar
+  const migrationChartData = migrations.slice(0, 6).map(m => ({
+    davlat: m.country,
+    soni: m.migrants,
+  }));
+
   return (
     <div className="space-y-6">
-      {/* Sahifa sarlavhasi */}
-      <div className="flex items-center justify-between">
+      {/* Sarlavha, Filtrlar va Boshqaruv Tugmalari */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Boshqaruv paneli</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Tuman ijtimoiy-iqtisodiy ko&apos;rsatkichlari umumiy ko&apos;rinishi
+            Tuman ijtimoiy-iqtisodiy, qishloq xo&apos;jaligi va qurilish ko&apos;rsatkichlari monitoringi
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <select className="form-input w-auto text-sm">
-            <option>2024-yil</option>
-            <option>2023-yil</option>
-            <option>2022-yil</option>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Yil tanlash */}
+          <select
+            value={selectedYear}
+            onChange={e => setSelectedYear(Number(e.target.value))}
+            className="form-input w-auto text-sm font-semibold bg-gray-50 cursor-pointer"
+          >
+            {availableYears.map(y => (
+              <option key={y} value={y}>{y}-yil</option>
+            ))}
           </select>
-          <select className="form-input w-auto text-sm">
-            <option>Barcha choraklar</option>
-            <option>1-chorak</option>
-            <option>2-chorak</option>
-            <option>3-chorak</option>
-            <option>4-chorak</option>
+
+          {/* Chorak tanlash */}
+          <select
+            value={selectedQuarter}
+            onChange={e => setSelectedQuarter(e.target.value)}
+            className="form-input w-auto text-sm font-semibold bg-gray-50 cursor-pointer"
+          >
+            <option value="Barcha choraklar">Barcha choraklar</option>
+            <option value="1-chorak">1-chorak</option>
+            <option value="2-chorak">2-chorak</option>
+            <option value="3-chorak">3-chorak</option>
+            <option value="4-chorak">4-chorak</option>
           </select>
+
+          {/* Qayta hisoblash tugmasi */}
+          <button
+            onClick={refreshCalculations}
+            className="btn-primary text-xs flex items-center gap-1.5"
+            title="Barcha bo'lim ma'lumotlarini qayta hisoblash"
+          >
+            <RefreshCw size={14} />
+            Yangilash
+          </button>
+
+          {/* Barcha taxminiy ma'lumotlarni tozalash */}
+          <button
+            onClick={clearAllData}
+            className="btn-outline text-xs text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-1.5"
+            title="Haqiqiy ma'lumotlarni kiritish uchun barcha taxminiy ma'lumotlarni o'chirish"
+          >
+            <Trash2 size={14} />
+            Tozalash
+          </button>
+
+          {/* Qayta tiklash */}
+          <button
+            onClick={resetToDefaults}
+            className="btn-outline text-xs flex items-center gap-1.5"
+            title="Namunaviy ma'lumotlarni qayta tiklash"
+          >
+            <RotateCcw size={14} />
+            Namuna
+          </button>
         </div>
       </div>
 
-      {/* KPI kartalar */}
+      {/* Jonli KPI kartochkalar */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {kpiData.map((kpi, index) => (
-          <KpiCard key={index} {...kpi} />
-        ))}
+        <KpiCard
+          title="Umumiy aholi"
+          value={totalPop}
+          subtitle={`${selectedYear}-yil holatiga`}
+          icon={<Users size={24} />}
+          color="blue"
+          trend={{ value: 2.3, label: "o'sish" }}
+        />
+        <KpiCard
+          title="Xonadonlar"
+          value={totalHouseholds}
+          subtitle="Ro'yxatda mavjud"
+          icon={<Home size={24} />}
+          color="green"
+          trend={{ value: 1.8, label: "o'sish" }}
+        />
+        <KpiCard
+          title="Faol bizneslar"
+          value={activeBusinessesCount}
+          subtitle="Korxonalar soni"
+          icon={<Briefcase size={24} />}
+          color="purple"
+          trend={{ value: 5.2, label: "yillik o'sish" }}
+        />
+        <KpiCard
+          title="Migrantlar"
+          value={totalMigrantsCount}
+          subtitle="Mehnat migratsiyasi"
+          icon={<Globe size={24} />}
+          color="orange"
+          trend={{ value: -3.1, label: "kamaygan" }}
+        />
+        <KpiCard
+          title="Maktablar"
+          value={totalSchoolsCount}
+          subtitle="Umumta'lim"
+          icon={<GraduationCap size={24} />}
+          color="teal"
+        />
+        <KpiCard
+          title="Tibbiyot maskanlari"
+          value={totalHealthCount}
+          subtitle="Kasalxona/Poliklinika"
+          icon={<Heart size={24} />}
+          color="red"
+          trend={{ value: 4.3, label: "yangilangan" }}
+        />
       </div>
 
-      {/* Ijro intizomi */}
+      {/* Ijro intizomi (Bo'limlar bilan jonli bog'langan) */}
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -157,18 +223,46 @@ export default function DashboardPage() {
               <Target size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Ijro intizomi</h2>
-              <p className="text-xs text-gray-500">Reja va haqiqiy bajarilish</p>
+              <h2 className="text-lg font-semibold text-gray-900">Ijro intizomi va Reja monitoringi</h2>
+              <p className="text-xs text-gray-500">Bo&apos;limlardagi ma&apos;lumotlarga asoslangan real bajarilish foizlari</p>
             </div>
           </div>
-          <button className="text-sm text-primary-500 hover:text-primary-600 flex items-center gap-1">
-            Batafsil <ArrowUpRight size={14} />
-          </button>
+          <span className="badge badge-info text-xs">
+            {selectedYear}-yil | {selectedQuarter}
+          </span>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {executionData.map((item, index) => (
-            <ProgressBar key={index} {...item} />
-          ))}
+          <ProgressBar
+            label="Soliq tushumlari"
+            planned={totalTaxPlanned || 45000000000}
+            actual={totalTaxActual || 38250000000}
+            unit="so'm"
+          />
+          <ProgressBar
+            label="Yangi ish o'rinlari"
+            planned={totalJobsPlanned || 5000}
+            actual={totalJobsActual || 4150}
+            unit="ta"
+          />
+          <ProgressBar
+            label="Qurilish va investitsiya loyihalari"
+            planned={totalProjectsCount || 25}
+            actual={completedProjectsCount || 18}
+            unit="ta obyekt"
+          />
+          <ProgressBar
+            label="\"Yashil makon\" daraxt ekish"
+            planned={totalTreesPlanned || 50000}
+            actual={totalTreesPlanted || 42500}
+            unit="tup"
+          />
+          <ProgressBar
+            label="Eksport hajmi"
+            planned={plannedExport}
+            actual={totalExportAmount || 12750000}
+            unit="USD"
+          />
         </div>
       </div>
 
@@ -184,29 +278,38 @@ export default function DashboardPage() {
           ]}
         />
         <StatsPieChart
-          title="Aholi yosh tarkibi"
-          data={populationData}
+          title="Aholi yosh tarkibi taqsimoti"
+          data={[
+            { name: '0-18 yosh', value: 86235 },
+            { name: '18-30 yosh', value: 63239 },
+            { name: '30-50 yosh', value: 80486 },
+            { name: '50-65 yosh', value: 37369 },
+            { name: '65+ yosh', value: 20121 },
+          ]}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StatsBarChart
-          title="Migratsiya - davlatlar bo'yicha"
-          data={migrationData}
+          title="Migratsiya - davlatlar bo'yicha (nafar)"
+          data={migrationChartData.length > 0 ? migrationChartData : [
+            { davlat: 'Rossiya', soni: 8450 },
+            { davlat: 'Qozog\'iston', soni: 1560 },
+            { davlat: 'Turkiya', soni: 980 },
+          ]}
           xAxisKey="davlat"
           bars={[
             { dataKey: 'soni', name: 'Migrantlar soni', color: '#f59e0b' },
           ]}
         />
         <StatsLineChart
-          title="Aholi o'sish dinamikasi"
+          title="Aholi o'sish dinamikasi (ming nafar)"
           data={[
-            { yil: '2019', aholi: 265000, xonadon: 58000 },
-            { yil: '2020', aholi: 271000, xonadon: 60500 },
-            { yil: '2021', aholi: 276000, xonadon: 62800 },
-            { yil: '2022', aholi: 280000, xonadon: 64500 },
-            { yil: '2023', aholi: 284000, xonadon: 66800 },
-            { yil: '2024', aholi: 287450, xonadon: 68200 },
+            { yil: '2020', aholi: 271, xonadon: 60.5 },
+            { yil: '2021', aholi: 276, xonadon: 62.8 },
+            { yil: '2022', aholi: 280, xonadon: 64.5 },
+            { yil: '2023', aholi: 284, xonadon: 66.8 },
+            { yil: '2024', aholi: Math.round(totalPop / 1000) || 287, xonadon: Math.round(totalHouseholds / 1000) || 68 },
           ]}
           xAxisKey="yil"
           lines={[

@@ -1,59 +1,117 @@
 'use client';
 
-import React from 'react';
-import { Briefcase, UserCheck, TrendingUp, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Briefcase, UserCheck, TrendingUp, AlertCircle, Plus, Edit, Trash2, X } from 'lucide-react';
 import DataTable from '@/components/common/DataTable';
 import KpiCard from '@/components/dashboard/KpiCard';
 import { StatsBarChart } from '@/components/dashboard/StatsChart';
-
-const columns = [
-  { key: 'sector', label: 'Iqtisodiy soha / Sektor', sortable: true },
-  {
-    key: 'plannedJobs',
-    label: 'Reja (yangi ish o\'rni)',
-    sortable: true,
-    render: (val: number) => val.toLocaleString('uz-UZ'),
-  },
-  {
-    key: 'actualJobs',
-    label: 'Haqiqatda yaratildi',
-    sortable: true,
-    render: (val: number) => val.toLocaleString('uz-UZ'),
-  },
-  {
-    key: 'executionRate',
-    label: 'Bajarilish %',
-    sortable: true,
-    render: (val: number) => (
-      <span className={`badge ${val >= 100 ? 'badge-success' : val >= 90 ? 'badge-info' : 'badge-warning'}`}>
-        {val}%
-      </span>
-    ),
-  },
-];
-
-const employmentData = [
-  { id: 1, sector: "Kichik biznes va tadbirkorlik", plannedJobs: 1500, actualJobs: 1450, executionRate: 96.6 },
-  { id: 2, sector: "Xizmat ko'rsatish va servis", plannedJobs: 2000, actualJobs: 2100, executionRate: 105.0 },
-  { id: 3, sector: "Qishloq xo'jaligi va agrosanoat", plannedJobs: 1000, actualJobs: 980, executionRate: 98.0 },
-  { id: 4, sector: "Sanoat va ishlab chiqarish", plannedJobs: 800, actualJobs: 820, executionRate: 102.5 },
-  { id: 5, sector: "Qurilish va infratuzilma", plannedJobs: 600, actualJobs: 570, executionRate: 95.0 },
-];
-
-const chartData = [
-  { soh: "Kichik biznes", reja: 1500, haqiqiy: 1450 },
-  { soh: "Xizmat", reja: 2000, haqiqiy: 2100 },
-  { soh: "Qishloq xo'j.", reja: 1000, haqiqiy: 980 },
-  { soh: "Sanoat", reja: 800, haqiqiy: 820 },
-  { soh: "Qurilish", reja: 600, haqiqiy: 570 },
-];
+import { useData, EmploymentItem } from '@/context/DataContext';
 
 export default function EmploymentPage() {
+  const { employments, addEmployment, updateEmployment, deleteEmployment } = useData();
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<EmploymentItem | null>(null);
+
+  const [sector, setSector] = useState('');
+  const [year, setYear] = useState(2024);
+  const [plannedJobs, setPlannedJobs] = useState(1000);
+  const [actualJobs, setActualJobs] = useState(950);
+
+  const openAdd = () => {
+    setEditingItem(null);
+    setSector('');
+    setYear(2024);
+    setPlannedJobs(1000);
+    setActualJobs(950);
+    setShowModal(true);
+  };
+
+  const openEdit = (item: EmploymentItem) => {
+    setEditingItem(item);
+    setSector(item.sector);
+    setYear(item.year);
+    setPlannedJobs(item.plannedJobs);
+    setActualJobs(item.actualJobs);
+    setShowModal(true);
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm("Ushbu bandlik ma'lumotini o'chirmoqchimisiz?")) {
+      deleteEmployment(id);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const executionRate = plannedJobs > 0 ? Number(((actualJobs / plannedJobs) * 100).toFixed(1)) : 0;
+    if (editingItem) {
+      updateEmployment({ id: editingItem.id, sector, year, plannedJobs, actualJobs, executionRate });
+    } else {
+      addEmployment({ sector, year, plannedJobs, actualJobs, executionRate });
+    }
+    setShowModal(false);
+  };
+
+  const totalPlanned = employments.reduce((s, e) => s + e.plannedJobs, 0);
+  const totalActual = employments.reduce((s, e) => s + e.actualJobs, 0);
+
+  const columns = [
+    { key: 'sector', label: 'Iqtisodiy soha / Sektor', sortable: true },
+    { key: 'year', label: 'Yil', sortable: true },
+    {
+      key: 'plannedJobs',
+      label: 'Reja (yangi ish o\'rni)',
+      sortable: true,
+      render: (val: number) => val.toLocaleString('uz-UZ'),
+    },
+    {
+      key: 'actualJobs',
+      label: 'Haqiqatda yaratildi',
+      sortable: true,
+      render: (val: number) => val.toLocaleString('uz-UZ'),
+    },
+    {
+      key: 'executionRate',
+      label: 'Bajarilish %',
+      sortable: true,
+      render: (val: number) => (
+        <span className={`badge ${val >= 100 ? 'badge-success' : val >= 90 ? 'badge-info' : 'badge-warning'}`}>
+          {val}%
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Amallar',
+      render: (_: any, row: EmploymentItem) => (
+        <div className="flex items-center gap-2">
+          <button onClick={() => openEdit(row)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+            <Edit size={16} />
+          </button>
+          <button onClick={() => handleDelete(row.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  const chartData = employments.map(e => ({
+    soh: e.sector.slice(0, 14),
+    reja: e.plannedJobs,
+    haqiqiy: e.actualJobs,
+  }));
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Iqtisodiyot: Bandlik va Yangi ish o&apos;rinlari</h1>
-        <p className="text-sm text-gray-500 mt-1">Hududda yangi ish o&apos;rinlarini yaratish va bandlik ko&apos;rsatkichlari</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Iqtisodiyot: Bandlik va Yangi ish o&apos;rinlari</h1>
+          <p className="text-sm text-gray-500 mt-1">Hududda yangi ish o&apos;rinlarini yaratish va bandlik ko&apos;rsatkichlari</p>
+        </div>
+        <button onClick={openAdd} className="btn-primary">
+          <Plus size={16} /> Yangi soha qo&apos;shish
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -63,31 +121,28 @@ export default function EmploymentPage() {
           subtitle="Iqtisodiy faol aholi"
           icon={<UserCheck size={24} />}
           color="green"
-          trend={{ value: 1.5, label: "o'tgan chorakka nisbatan" }}
         />
         <KpiCard
           title="Yangi ish o'rinlari"
-          value="5,920 ta"
-          subtitle="Yillik jamg'arilgan"
+          value={totalActual.toLocaleString()}
+          subtitle="Amalda yaratilgan"
           icon={<Briefcase size={24} />}
           color="blue"
           trend={{ value: 4.2, label: "o'sish" }}
         />
         <KpiCard
-          title="O'rtacha oylik maosh"
-          value="3.8 mln so'm"
-          subtitle="Rasmiy sektor"
+          title="Yillik reja"
+          value={totalPlanned.toLocaleString()}
+          subtitle="Kutilayotgan maqsad"
           icon={<TrendingUp size={24} />}
           color="purple"
-          trend={{ value: 8.5, label: "inflyatsiyadan yuqori" }}
         />
         <KpiCard
-          title="Ish izlayotganlar"
-          value="1,420 kishi"
-          subtitle="Bandlik markazida"
+          title="Bajarilish foizi"
+          value={`${totalPlanned > 0 ? ((totalActual / totalPlanned) * 100).toFixed(1) : 0}%`}
+          subtitle="Umumiy samaradorlik"
           icon={<AlertCircle size={24} />}
           color="orange"
-          trend={{ value: -3.1, label: "kamayish" }}
         />
       </div>
 
@@ -95,8 +150,10 @@ export default function EmploymentPage() {
         <DataTable
           title="Sektorlar kesimida ish o'rinlari"
           columns={columns}
-          data={employmentData}
+          data={employments}
           searchPlaceholder="Sohani qidirish..."
+          onAdd={openAdd}
+          addLabel="Yangi soha"
           onExport={() => alert('Excel ga eksport qilinmoqda...')}
         />
         <StatsBarChart
@@ -109,6 +166,41 @@ export default function EmploymentPage() {
           ]}
         />
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <h3 className="text-lg font-bold text-gray-900">{editingItem ? "Sohani tahrirlash" : "Yangi bandlik sohasi"}</h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="form-label">Iqtisodiy soha / Sektor nomi</label>
+                <input type="text" value={sector} onChange={e => setSector(e.target.value)} placeholder="Masalan: Raqamli texnologiyalar" className="form-input" required />
+              </div>
+              <div>
+                <label className="form-label">Yil</label>
+                <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} className="form-input" required />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label">Reja (ish o&apos;rni)</label>
+                  <input type="number" value={plannedJobs} onChange={e => setPlannedJobs(Number(e.target.value))} className="form-input" required />
+                </div>
+                <div>
+                  <label className="form-label">Haqiqatda yaratildi</label>
+                  <input type="number" value={actualJobs} onChange={e => setActualJobs(Number(e.target.value))} className="form-input" required />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowModal(false)} className="btn-outline flex-1">Bekor qilish</button>
+                <button type="submit" className="btn-primary flex-1">Saqlash</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
