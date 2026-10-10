@@ -1,51 +1,57 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sun, Leaf, CheckCircle, Plus, Edit, Trash2, X } from 'lucide-react';
+import {
+  Leaf,
+  Sun,
+  MapPin,
+  Plus,
+  Edit,
+  Trash2,
+  X,
+  FileSpreadsheet,
+  FileText,
+  AlertCircle,
+  Zap,
+} from 'lucide-react';
 import DataTable from '@/components/common/DataTable';
 import KpiCard from '@/components/dashboard/KpiCard';
 import ProgressBar from '@/components/dashboard/ProgressBar';
-
-interface GreenItem {
-  id: number;
-  name: string;
-  spaceType: string;
-  area: number;
-  treesPlanted: number;
-  plannedTrees: number;
-  solarPanels: number;
-  solarCapacity: number;
-}
-
-const initialData: GreenItem[] = [
-  { id: 1, name: "Yangi O'zbekiston bog'i tumani qismi", spaceType: "Bog'", area: 45.0, treesPlanted: 18500, plannedTrees: 20000, solarPanels: 120, solarCapacity: 48.0 },
-  { id: 2, name: "Chilonzor yashil belbog'i", spaceType: "Ko'kalamzor", area: 28.5, treesPlanted: 12400, plannedTrees: 15000, solarPanels: 45, solarCapacity: 18.0 },
-  { id: 3, name: "Bunyodkor shoh ko'chasi xiyoboni", spaceType: "Xiyobon", area: 12.0, treesPlanted: 6200, plannedTrees: 6500, solarPanels: 80, solarCapacity: 32.0 },
-  { id: 4, name: "Do'stlik istirohat parki", spaceType: "Park", area: 18.0, treesPlanted: 8900, plannedTrees: 9000, solarPanels: 60, solarCapacity: 24.0 },
-];
+import AttachmentUploader from '@/components/common/AttachmentUploader';
+import DocumentViewerModal from '@/components/common/DocumentViewerModal';
+import { useData, GreenItem, FileAttachment } from '@/context/DataContext';
 
 export default function GreenSpacePage() {
-  const [data, setData] = useState<GreenItem[]>(initialData);
+  const { filteredGreenSpaces, addGreenSpace, updateGreenSpace, deleteGreenSpace, addDraft, selectedYear } = useData();
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<GreenItem | null>(null);
 
   const [name, setName] = useState('');
-  const [spaceType, setSpaceType] = useState('Bog\'');
-  const [area, setArea] = useState(10.0);
-  const [treesPlanted, setTreesPlanted] = useState(5000);
-  const [plannedTrees, setPlannedTrees] = useState(6000);
-  const [solarPanels, setSolarPanels] = useState(50);
-  const [solarCapacity, setSolarCapacity] = useState(20.0);
+  const [spaceType, setSpaceType] = useState('Tuman istirohat bog\'i');
+  const [area, setArea] = useState(15.0);
+  const [treesPlanted, setTreesPlanted] = useState(12000);
+  const [plannedTrees, setPlannedTrees] = useState(15000);
+  const [solarPanels, setSolarPanels] = useState(32);
+  const [solarCapacity, setSolarCapacity] = useState(15.0);
+  const [attachment, setAttachment] = useState<FileAttachment | null>(null);
+  const [validationError, setValidationError] = useState('');
+  const [sendToDraft, setSendToDraft] = useState(false);
+
+  const [viewerAttachment, setViewerAttachment] = useState<FileAttachment | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const openAdd = () => {
     setEditingItem(null);
     setName('');
-    setSpaceType('Bog\'');
-    setArea(10.0);
-    setTreesPlanted(5000);
-    setPlannedTrees(6000);
-    setSolarPanels(50);
-    setSolarCapacity(20.0);
+    setSpaceType('Tuman istirohat bog\'i');
+    setArea(15.0);
+    setTreesPlanted(12000);
+    setPlannedTrees(15000);
+    setSolarPanels(32);
+    setSolarCapacity(15.0);
+    setAttachment(null);
+    setValidationError('');
+    setSendToDraft(false);
     setShowModal(true);
   };
 
@@ -58,51 +64,140 @@ export default function GreenSpacePage() {
     setPlannedTrees(item.plannedTrees);
     setSolarPanels(item.solarPanels);
     setSolarCapacity(item.solarCapacity);
+    setAttachment(item.attachment || null);
+    setValidationError('');
+    setSendToDraft(false);
     setShowModal(true);
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Ushbu yashil hududni o'chirmoqchimisiz?")) {
-      setData(data.filter(d => d.id !== id));
+    if (confirm("Ushbu yashil hudud ma'lumotini o'chirmoqchimisiz?")) {
+      deleteGreenSpace(id);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingItem) {
-      setData(data.map(d => d.id === editingItem.id ? { ...d, name, spaceType, area, treesPlanted, plannedTrees, solarPanels, solarCapacity } : d));
-    } else {
-      setData([{ id: Date.now(), name, spaceType, area, treesPlanted, plannedTrees, solarPanels, solarCapacity }, ...data]);
+    setValidationError('');
+
+    if (!name.trim()) {
+      setValidationError("Hudud nomini kiriting.");
+      return;
     }
+    if (area <= 0) {
+      setValidationError("Maydon (ga) noldan katta bo'lishi kerak.");
+      return;
+    }
+    if (plannedTrees <= 0) {
+      setValidationError("Rejadagi daraxtlar soni noldan katta bo'lishi kerak.");
+      return;
+    }
+    if (treesPlanted < 0) {
+      setValidationError("Ekilgan daraxtlar soni manfiy bo'lishi mumkin emas.");
+      return;
+    }
+    if (solarPanels < 0 || solarCapacity < 0) {
+      setValidationError("Quyosh panellari ko'rsatkichlari manfiy bo'lishi mumkin emas.");
+      return;
+    }
+
+    const payload = {
+      name,
+      spaceType,
+      area,
+      treesPlanted,
+      plannedTrees,
+      solarPanels,
+      solarCapacity,
+      attachment,
+      year: selectedYear,
+      date: new Date().toISOString().split('T')[0],
+    };
+
+    if (sendToDraft && !editingItem) {
+      addDraft({
+        module: 'green',
+        moduleTitle: "Yashil makon",
+        data: payload,
+        source: 'MANUAL_ENTRY',
+        confidence: 100,
+      });
+      alert("Ma'lumotlar tasdiqlash navbati (Qoralamalar)ga yuborildi.");
+    } else {
+      if (editingItem) {
+        updateGreenSpace({ ...payload, id: editingItem.id });
+      } else {
+        addGreenSpace(payload);
+      }
+    }
+
     setShowModal(false);
   };
 
-  const totalTrees = data.reduce((s, d) => s + d.treesPlanted, 0);
-  const totalPlannedTrees = data.reduce((s, d) => s + d.plannedTrees, 0);
-  const totalSolar = data.reduce((s, d) => s + d.solarCapacity, 0);
+  const totalTrees = filteredGreenSpaces.reduce((s, g) => s + g.treesPlanted, 0);
+  const totalPlanned = filteredGreenSpaces.reduce((s, g) => s + g.plannedTrees, 0);
+  const totalArea = filteredGreenSpaces.reduce((s, g) => s + g.area, 0);
+  const totalSolarCap = filteredGreenSpaces.reduce((s, g) => s + g.solarCapacity, 0);
 
   const columns = [
-    { key: 'name', label: 'Hudud / Obyekt nomi', sortable: true },
-    { key: 'spaceType', label: 'Turi', sortable: true },
-    { key: 'area', label: 'Maydoni (ga)', sortable: true, render: (val: number) => `${val} gektar` },
-    { key: 'treesPlanted', label: 'Ekilgan daraxtlar', sortable: true, render: (val: number) => `${val.toLocaleString()} tup` },
+    { key: 'name', label: 'Hudud nomi', sortable: true },
+    { key: 'spaceType', label: 'Hudud turi', sortable: true },
     {
-      key: 'bajarilish',
-      label: 'Reja bajarilishi',
-      render: (_: any, row: GreenItem) => {
-        const rate = row.plannedTrees > 0 ? ((row.treesPlanted / row.plannedTrees) * 100).toFixed(1) : '0';
-        return <span className="badge badge-success">{rate}%</span>;
-      },
+      key: 'area',
+      label: 'Maydoni (ga)',
+      sortable: true,
+      render: (val: number) => `${val} ga`,
     },
-    { key: 'solarPanels', label: 'Quyosh panellari', sortable: true, render: (val: number) => `${val} dona` },
-    { key: 'solarCapacity', label: 'Quvvati (kVt)', sortable: true, render: (val: number) => `${val} kVt` },
+    {
+      key: 'treesPlanted',
+      label: 'Ekilgan daraxtlar',
+      sortable: true,
+      render: (val: number, row: GreenItem) => (
+        <div>
+          <span className="font-semibold text-gray-900">{val.toLocaleString('uz-UZ')}</span>
+          <span className="text-xs text-gray-400"> / {row.plannedTrees.toLocaleString('uz-UZ')}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'solarPanels',
+      label: 'Quyosh panellari',
+      sortable: true,
+      render: (val: number, row: GreenItem) => `${val} dona (${row.solarCapacity} kVt)`,
+    },
+    {
+      key: 'attachment',
+      label: 'Hujjat',
+      render: (att: FileAttachment | null) => (
+        att ? (
+          <button
+            onClick={() => { setViewerAttachment(att); setViewerOpen(true); }}
+            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded-lg border border-blue-200 transition-colors"
+            title={att.name}
+          >
+            {att.name.endsWith('.xlsx') || att.name.endsWith('.xls') ? (
+              <FileSpreadsheet size={13} className="text-emerald-600" />
+            ) : (
+              <FileText size={13} className="text-blue-600" />
+            )}
+            <span className="max-w-[70px] truncate">{att.name}</span>
+          </button>
+        ) : (
+          <span className="text-xs text-gray-400">-</span>
+        )
+      ),
+    },
     {
       key: 'actions',
       label: 'Amallar',
       render: (_: any, row: GreenItem) => (
-        <div className="flex items-center gap-2">
-          <button onClick={() => openEdit(row)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={16} /></button>
-          <button onClick={() => handleDelete(row.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => openEdit(row)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+            <Edit size={15} />
+          </button>
+          <button onClick={() => handleDelete(row.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg">
+            <Trash2 size={15} />
+          </button>
         </div>
       ),
     },
@@ -110,96 +205,207 @@ export default function GreenSpacePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">&quot;Yashil makon&quot; umummilliy loyihasi va Yashil energiya</h1>
-          <p className="text-sm text-gray-500 mt-1">Daraxt ekish, ko&apos;kalamzorlashtirish maydonlari va quyosh panellari monitoringi</p>
+          <h1 className="text-2xl font-bold text-gray-900">&quot;Yashil makon&quot; va Yashil energetika</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Daraxt ekish umummilliy loyihasi va quyosh energetikasi joriy etilishi monitoringi
+          </p>
         </div>
-        <button onClick={openAdd} className="btn-primary">
+        <button onClick={openAdd} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> Yangi yashil hudud qo&apos;shish
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <KpiCard title="Ekilgan daraxtlar" value={`${totalTrees.toLocaleString()} tup`} subtitle="Yashil makon doirasida" icon={<Leaf size={24} />} color="green" trend={{ value: 8.5, label: "o'sish" }} />
-        <KpiCard title="Reja bajarilishi" value={`${((totalTrees / totalPlannedTrees) * 100).toFixed(1)}%`} subtitle="Umumiy maqsad" icon={<CheckCircle size={24} />} color="teal" />
-        <KpiCard title="Yashil hududlar" value="103.5 ga" subtitle="Bog' va parklar" icon={<Leaf size={24} />} color="blue" />
-        <KpiCard title="Quyosh energiyasi" value={`${totalSolar.toFixed(0)} kVt`} subtitle="O'rnatilgan quvvat" icon={<Sun size={24} />} color="orange" />
-      </div>
-
-      <div className="card">
-        <h3 className="text-base font-semibold mb-4">&quot;Yashil makon&quot; mavsumiy rejasi ko&apos;rsatkichlari</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ProgressBar label="Bahorgi daraxt ekish mavsumi" planned={30000} actual={28500} unit="tup" />
-          <ProgressBar label="Kuzgi daraxt ekish mavsumi" planned={25000} actual={17500} unit="tup" />
-          <ProgressBar label="Ijtimoiy ob'ektlarda quyosh panellari" planned={50} actual={46} unit="ta" />
-          <ProgressBar label="Tomchilatib sug'orish tizimi joriy etildi" planned={40} actual={35} unit="gektar" />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="Ekilgan daraxtlar"
+          value={totalTrees > 0 ? `${totalTrees.toLocaleString('uz-UZ')} tup` : "0"}
+          period="Amalda ekilgan"
+          icon={<Leaf size={24} />}
+          color="emerald"
+        />
+        <KpiCard
+          title="Rejalashtirilgan ko'chat"
+          value={totalPlanned > 0 ? `${totalPlanned.toLocaleString('uz-UZ')} tup` : "0"}
+          period="Mavsumiy reja"
+          icon={<MapPin size={24} />}
+          color="blue"
+        />
+        <KpiCard
+          title="Umumiy yashil maydon"
+          value={`${totalArea.toFixed(1)} ga`}
+          period="Tuman bo'yicha"
+          icon={<Sun size={24} />}
+          color="green"
+        />
+        <KpiCard
+          title="Quyosh energiyasi quvvati"
+          value={`${totalSolarCap.toFixed(1)} kVt`}
+          period="Yashil energiya manbalari"
+          icon={<Zap size={24} />}
+          color="amber"
+        />
       </div>
 
       <DataTable
-        title="Yashil hududlar va quyosh panellari ro'yxati"
+        title="Yashil hududlar va loyihalar ro'yxati"
         columns={columns}
-        data={data}
+        data={filteredGreenSpaces}
         searchPlaceholder="Hudud nomini qidirish..."
         onAdd={openAdd}
         addLabel="Yangi hudud"
-        onExport={() => alert("Excel ga eksport qilinmoqda...")}
+        onExport={() => alert('Excel formatida yuklanmoqda...')}
       />
 
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-gray-100 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b">
-              <h3 className="text-lg font-bold text-gray-900">{editingItem ? "Hududni tahrirlash" : "Yangi yashil hudud"}</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <h3 className="text-lg font-bold text-gray-900">
+                {editingItem ? "Yashil hududni tahrirlash" : "Yangi yashil hudud qo'shish"}
+              </h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
             </div>
+
+            {validationError && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-3.5 py-2.5 rounded-xl text-xs">
+                <AlertCircle size={16} className="flex-shrink-0" />
+                <span>{validationError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="form-label">Hudud / Bog&apos; nomi</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} className="form-input" required />
+                <label className="form-label">Hudud yoki ob&apos;ekt nomi</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Masalan: Angor 'Yashil makon' istirohat bog'i"
+                  className="form-input"
+                  required
+                />
               </div>
-              <div>
-                <label className="form-label">Hudud turi</label>
-                <select value={spaceType} onChange={e => setSpaceType(e.target.value)} className="form-input">
-                  <option value="Bog'">Bog&apos;</option>
-                  <option value="Park">Park / Istirohat bog&apos;i</option>
-                  <option value="Xiyobon">Xiyobon</option>
-                  <option value="Ko'kalamzor">Yashil belbog&apos;</option>
-                </select>
-              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="form-label">Maydoni (gektar)</label>
-                  <input type="number" step="0.1" value={area} onChange={e => setArea(Number(e.target.value))} className="form-input" required />
+                  <label className="form-label">Hudud turi</label>
+                  <input
+                    type="text"
+                    value={spaceType}
+                    onChange={e => setSpaceType(e.target.value)}
+                    placeholder="Masalan: Istirohat bog'i"
+                    className="form-input"
+                    required
+                  />
                 </div>
+                <div>
+                  <label className="form-label">Maydoni (ga)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={area}
+                    onChange={e => setArea(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="form-label">Ekilgan daraxtlar</label>
-                  <input type="number" value={treesPlanted} onChange={e => setTreesPlanted(Number(e.target.value))} className="form-input" required />
+                  <input
+                    type="number"
+                    min="0"
+                    value={treesPlanted}
+                    onChange={e => setTreesPlanted(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="form-label">Rejadagi daraxtlar</label>
-                  <input type="number" value={plannedTrees} onChange={e => setPlannedTrees(Number(e.target.value))} className="form-input" required />
+                  <input
+                    type="number"
+                    min="1"
+                    value={plannedTrees}
+                    onChange={e => setPlannedTrees(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="form-label">Quyosh panellari (dona)</label>
-                  <input type="number" value={solarPanels} onChange={e => setSolarPanels(Number(e.target.value))} className="form-input" />
+                  <input
+                    type="number"
+                    min="0"
+                    value={solarPanels}
+                    onChange={e => setSolarPanels(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Quyosh quvvati (kVt)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={solarCapacity}
+                    onChange={e => setSolarCapacity(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
                 </div>
               </div>
-              <div>
-                <label className="form-label">Quyosh energiyasi quvvati (kVt)</label>
-                <input type="number" step="0.1" value={solarCapacity} onChange={e => setSolarCapacity(Number(e.target.value))} className="form-input" />
-              </div>
+
+              <AttachmentUploader
+                attachment={attachment}
+                onChange={setAttachment}
+                label="Asoslovchi hisobot fayli (PDF/Excel)"
+              />
+
+              {!editingItem && (
+                <div className="flex items-center gap-2 p-3 bg-blue-50/60 border border-blue-200 rounded-xl text-xs text-blue-900">
+                  <input
+                    type="checkbox"
+                    id="draftGreen"
+                    checked={sendToDraft}
+                    onChange={e => setSendToDraft(e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="draftGreen" className="cursor-pointer">
+                    Qoralama sifatida yuborish (Tasdiqlash navbatiga qo&apos;shish)
+                  </label>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-outline flex-1">Bekor qilish</button>
-                <button type="submit" className="btn-primary flex-1">Saqlash</button>
+                <button type="button" onClick={() => setShowModal(false)} className="btn-outline flex-1">
+                  Bekor qilish
+                </button>
+                <button type="submit" className="btn-primary flex-1">
+                  {editingItem ? "Yangilash" : sendToDraft ? "Qoralamaga yuborish" : "Saqlash"}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <DocumentViewerModal
+        attachment={viewerAttachment}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
     </div>
   );
 }

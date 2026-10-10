@@ -1,53 +1,59 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GraduationCap, BookOpen, Award, Plus, Edit, Trash2, X } from 'lucide-react';
+import {
+  GraduationCap,
+  Users,
+  Award,
+  BookOpen,
+  Plus,
+  Edit,
+  Trash2,
+  X,
+  FileSpreadsheet,
+  FileText,
+  AlertCircle,
+} from 'lucide-react';
 import DataTable from '@/components/common/DataTable';
 import KpiCard from '@/components/dashboard/KpiCard';
 import ProgressBar from '@/components/dashboard/ProgressBar';
-
-interface SchoolItem {
-  id: number;
-  name: string;
-  type: string;
-  capacity: number;
-  students: number;
-  teachers: number;
-  collegeAdmissionPercent: number;
-}
-
-const initialData: SchoolItem[] = [
-  { id: 1, name: "1-sonli ixtisoslashtirilgan davlat maktabi", type: "Maktab", capacity: 1200, students: 1350, teachers: 82, collegeAdmissionPercent: 92.4 },
-  { id: 2, name: "20-sonli umumiy o'rta ta'lim maktabi", type: "Maktab", capacity: 960, students: 890, teachers: 54, collegeAdmissionPercent: 78.0 },
-  { id: 3, name: "45-sonli ixtisoslashtirilgan maktab-internat", type: "Internat", capacity: 600, students: 580, teachers: 48, collegeAdmissionPercent: 88.5 },
-  { id: 4, name: "12-sonli davlat maktabgacha ta'lim tashkiloti", type: "Bog'cha", capacity: 280, students: 310, teachers: 22, collegeAdmissionPercent: 0 },
-  { id: 5, name: "Tuman pedagogika kasb-hunar maktabi", type: "Kollej", capacity: 750, students: 680, teachers: 45, collegeAdmissionPercent: 65.0 },
-];
+import AttachmentUploader from '@/components/common/AttachmentUploader';
+import DocumentViewerModal from '@/components/common/DocumentViewerModal';
+import { useData, EducationItem, FileAttachment } from '@/context/DataContext';
 
 export default function EducationPage() {
-  const [data, setData] = useState<SchoolItem[]>(initialData);
+  const { filteredEducations, addEducation, updateEducation, deleteEducation, addDraft, selectedYear } = useData();
   const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<SchoolItem | null>(null);
+  const [editingItem, setEditingItem] = useState<EducationItem | null>(null);
 
   const [name, setName] = useState('');
-  const [type, setType] = useState('Maktab');
-  const [capacity, setCapacity] = useState(1000);
-  const [students, setStudents] = useState(1000);
-  const [teachers, setTeachers] = useState(60);
+  const [type, setType] = useState<EducationItem['type']>('Maktab');
+  const [capacity, setCapacity] = useState(700);
+  const [students, setStudents] = useState(650);
+  const [teachers, setTeachers] = useState(50);
   const [collegeAdmissionPercent, setCollegeAdmissionPercent] = useState(80);
+  const [attachment, setAttachment] = useState<FileAttachment | null>(null);
+  const [validationError, setValidationError] = useState('');
+  const [sendToDraft, setSendToDraft] = useState(false);
+
+  const [viewerAttachment, setViewerAttachment] = useState<FileAttachment | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const openAdd = () => {
     setEditingItem(null);
     setName('');
     setType('Maktab');
-    setCapacity(1000);
-    setStudents(1000);
-    setTeachers(60);
+    setCapacity(700);
+    setStudents(650);
+    setTeachers(50);
     setCollegeAdmissionPercent(80);
+    setAttachment(null);
+    setValidationError('');
+    setSendToDraft(false);
     setShowModal(true);
   };
 
-  const openEdit = (item: SchoolItem) => {
+  const openEdit = (item: EducationItem) => {
     setEditingItem(item);
     setName(item.name);
     setType(item.type);
@@ -55,46 +61,148 @@ export default function EducationPage() {
     setStudents(item.students);
     setTeachers(item.teachers);
     setCollegeAdmissionPercent(item.collegeAdmissionPercent);
+    setAttachment(item.attachment || null);
+    setValidationError('');
+    setSendToDraft(false);
     setShowModal(true);
   };
 
   const handleDelete = (id: number) => {
     if (confirm("Ushbu ta'lim muassasasini o'chirmoqchimisiz?")) {
-      setData(data.filter(d => d.id !== id));
+      deleteEducation(id);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingItem) {
-      setData(data.map(d => d.id === editingItem.id ? { ...d, name, type, capacity, students, teachers, collegeAdmissionPercent } : d));
-    } else {
-      setData([{ id: Date.now(), name, type, capacity, students, teachers, collegeAdmissionPercent }, ...data]);
+    setValidationError('');
+
+    if (!name.trim()) {
+      setValidationError("Muassasa nomini kiriting.");
+      return;
     }
+    if (capacity <= 0) {
+      setValidationError("Quvvat (o'rinlar soni) noldan katta bo'lishi kerak.");
+      return;
+    }
+    if (students <= 0) {
+      setValidationError("O'quvchilar soni noldan katta bo'lishi kerak.");
+      return;
+    }
+    if (teachers <= 0) {
+      setValidationError("O'qituvchilar soni noldan katta bo'lishi kerak.");
+      return;
+    }
+    if (collegeAdmissionPercent < 0 || collegeAdmissionPercent > 100) {
+      setValidationError("OTMga kirish ko'rsatkichi 0 va 100 oralig'ida bo'lishi kerak.");
+      return;
+    }
+
+    const payload = {
+      name,
+      type,
+      capacity,
+      students,
+      teachers,
+      collegeAdmissionPercent,
+      attachment,
+      year: selectedYear,
+      date: new Date().toISOString().split('T')[0],
+    };
+
+    if (sendToDraft && !editingItem) {
+      addDraft({
+        module: 'education',
+        moduleTitle: "Ta'lim muassasalari",
+        data: payload,
+        source: 'MANUAL_ENTRY',
+        confidence: 100,
+      });
+      alert("Ma'lumotlar tasdiqlash navbati (Qoralamalar)ga yuborildi.");
+    } else {
+      if (editingItem) {
+        updateEducation({ ...payload, id: editingItem.id });
+      } else {
+        addEducation(payload);
+      }
+    }
+
     setShowModal(false);
   };
 
+  const totalStudents = filteredEducations.reduce((s, e) => s + e.students, 0);
+  const totalTeachers = filteredEducations.reduce((s, e) => s + e.teachers, 0);
+  const schoolsCount = filteredEducations.filter(e => e.type === 'Maktab').length;
+
   const columns = [
     { key: 'name', label: 'Muassasa nomi', sortable: true },
-    { key: 'type', label: 'Turi', sortable: true },
-    { key: 'capacity', label: 'Quvvati (o\'rin)', sortable: true, render: (val: number) => val.toLocaleString() },
-    { key: 'students', label: 'O\'quvchilar soni', sortable: true, render: (val: number) => val.toLocaleString() },
-    { key: 'teachers', label: 'O\'qituvchilar', sortable: true, render: (val: number) => val.toLocaleString() },
+    {
+      key: 'type',
+      label: 'Turi',
+      sortable: true,
+      render: (val: string) => (
+        <span className="badge badge-info">{val}</span>
+      ),
+    },
+    {
+      key: 'capacity',
+      label: 'Quvvati',
+      sortable: true,
+      render: (val: number) => val.toLocaleString('uz-UZ'),
+    },
+    {
+      key: 'students',
+      label: "O'quvchilar soni",
+      sortable: true,
+      render: (val: number) => (
+        <span className="font-semibold text-gray-900">{val.toLocaleString('uz-UZ')}</span>
+      ),
+    },
+    {
+      key: 'teachers',
+      label: "O'qituvchilar",
+      sortable: true,
+      render: (val: number) => val.toLocaleString('uz-UZ'),
+    },
     {
       key: 'collegeAdmissionPercent',
-      label: 'OTMga kirish %',
+      label: 'OTMga kirish',
       sortable: true,
-      render: (val: number) => val > 0 ? (
-        <span className={`badge ${val >= 80 ? 'badge-success' : 'badge-info'}`}>{val}%</span>
-      ) : <span className="text-gray-400 text-xs">-</span>,
+      render: (val: number) => `${val}%`,
+    },
+    {
+      key: 'attachment',
+      label: 'Hujjat',
+      render: (att: FileAttachment | null) => (
+        att ? (
+          <button
+            onClick={() => { setViewerAttachment(att); setViewerOpen(true); }}
+            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded-lg border border-blue-200 transition-colors"
+            title={att.name}
+          >
+            {att.name.endsWith('.xlsx') || att.name.endsWith('.xls') ? (
+              <FileSpreadsheet size={13} className="text-emerald-600" />
+            ) : (
+              <FileText size={13} className="text-blue-600" />
+            )}
+            <span className="max-w-[70px] truncate">{att.name}</span>
+          </button>
+        ) : (
+          <span className="text-xs text-gray-400">-</span>
+        )
+      ),
     },
     {
       key: 'actions',
       label: 'Amallar',
-      render: (_: any, row: SchoolItem) => (
-        <div className="flex items-center gap-2">
-          <button onClick={() => openEdit(row)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={16} /></button>
-          <button onClick={() => handleDelete(row.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+      render: (_: any, row: EducationItem) => (
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => openEdit(row)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+            <Edit size={15} />
+          </button>
+          <button onClick={() => handleDelete(row.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg">
+            <Trash2 size={15} />
+          </button>
         </div>
       ),
     },
@@ -102,92 +210,196 @@ export default function EducationPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Xalq ta&apos;limi va Maktabgacha ta&apos;lim</h1>
-          <p className="text-sm text-gray-500 mt-1">Maktablar, bog&apos;chalar quvvati, o&apos;quvchilar va OTMga kirish ko&apos;rsatkichlari</p>
+          <h1 className="text-2xl font-bold text-gray-900">Ta&apos;lim sohasi monitoringi</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Maktablar, maktabgacha ta&apos;lim va kasb-hunar maskanlari statistikasi
+          </p>
         </div>
-        <button onClick={openAdd} className="btn-primary">
+        <button onClick={openAdd} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> Yangi muassasa qo&apos;shish
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <KpiCard title="Maktablar soni" value="47 ta" subtitle="Umumta'lim" icon={<GraduationCap size={24} />} color="blue" />
-        <KpiCard title="Maktabgacha ta'lim" value="62 ta" subtitle="Qamrov 84.5%" icon={<BookOpen size={24} />} color="green" trend={{ value: 4.8, label: "qamrov o'sdi" }} />
-        <KpiCard title="Jami o'quvchilar" value="48,200" subtitle="Maktablarda" icon={<BookOpen size={24} />} color="purple" />
-        <KpiCard title="OTMga kirish ko'rsatkichi" value="76.8%" subtitle="Bitiruvchilar ulushi" icon={<Award size={24} />} color="teal" trend={{ value: 6.2, label: "o'sish" }} />
-      </div>
-
-      <div className="card">
-        <h3 className="text-base font-semibold mb-4">Ta&apos;lim qamrovi va infratuzilma koeffitsiyentlari</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ProgressBar label="Maktab yoshidagi bolalar qamrovi" planned={48200} actual={48200} unit="nafar" />
-          <ProgressBar label="Maktabgacha ta'lim qamrovi (3-7 yosh)" planned={24000} actual={20280} unit="nafar" />
-          <ProgressBar label="Zamonaviy kompyuter sinflari" planned={47} actual={44} unit="maktabda" />
-          <ProgressBar label="Oliy toifali o'qituvchilar" planned={3200} actual={2450} unit="nafar" />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="Jami muassasalar"
+          value={`${filteredEducations.length} ta`}
+          period={`${schoolsCount} ta maktab`}
+          icon={<GraduationCap size={24} />}
+          color="blue"
+        />
+        <KpiCard
+          title="O'quvchilar soni"
+          value={totalStudents > 0 ? `${totalStudents.toLocaleString('uz-UZ')} nafar` : "0"}
+          period="Barcha bosqichlarda"
+          icon={<Users size={24} />}
+          color="emerald"
+        />
+        <KpiCard
+          title="Pedagoglar soni"
+          value={totalTeachers > 0 ? `${totalTeachers.toLocaleString('uz-UZ')} nafar` : "0"}
+          period="Malakali o'qituvchilar"
+          icon={<BookOpen size={24} />}
+          color="indigo"
+        />
+        <KpiCard
+          title="O'rtacha OTMga kirish"
+          value="82.4%"
+          period="Bitiruvchilar qamrovi"
+          icon={<Award size={24} />}
+          color="amber"
+        />
       </div>
 
       <DataTable
-        title="Ta'lim muassasalari reyestri"
+        title="Ta'lim muassasalari ro'yxati"
         columns={columns}
-        data={data}
+        data={filteredEducations}
         searchPlaceholder="Muassasa nomini qidirish..."
         onAdd={openAdd}
-        addLabel="Yangi maktab/bog'cha"
-        onExport={() => alert("Excel ga eksport qilinmoqda...")}
+        addLabel="Yangi muassasa"
+        onExport={() => alert('Excel formatida yuklanmoqda...')}
       />
 
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-gray-100 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b">
-              <h3 className="text-lg font-bold text-gray-900">{editingItem ? "Muassasani tahrirlash" : "Yangi ta'lim muassasasi"}</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <h3 className="text-lg font-bold text-gray-900">
+                {editingItem ? "Muassasani tahrirlash" : "Yangi muassasa qo'shish"}
+              </h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
             </div>
+
+            {validationError && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-3.5 py-2.5 rounded-xl text-xs">
+                <AlertCircle size={16} className="flex-shrink-0" />
+                <span>{validationError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="form-label">Muassasa nomi</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} className="form-input" required />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Masalan: Angor tuman 1-sonli maktab"
+                  className="form-input"
+                  required
+                />
               </div>
+
               <div>
                 <label className="form-label">Muassasa turi</label>
-                <select value={type} onChange={e => setType(e.target.value)} className="form-input">
+                <select
+                  value={type}
+                  onChange={e => setType(e.target.value as any)}
+                  className="form-input"
+                >
                   <option value="Maktab">Maktab</option>
                   <option value="Bog'cha">Bog&apos;cha</option>
-                  <option value="Internat">Internat</option>
-                  <option value="Kollej">Kollej / Texnikum</option>
+                  <option value="Kollej / Texnikum">Kollej / Texnikum</option>
+                  <option value="Maktab-internat">Maktab-internat</option>
                 </select>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="form-label">Quvvati (o&apos;rin)</label>
-                  <input type="number" value={capacity} onChange={e => setCapacity(Number(e.target.value))} className="form-input" required />
+                  <label className="form-label">Quvvati (o&apos;rinlar)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={capacity}
+                    onChange={e => setCapacity(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="form-label">Ta&apos;lim oluvchilar</label>
-                  <input type="number" value={students} onChange={e => setStudents(Number(e.target.value))} className="form-input" required />
+                  <label className="form-label">O&apos;quvchilar soni</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={students}
+                    onChange={e => setStudents(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="form-label">O&apos;qituvchilar</label>
-                  <input type="number" value={teachers} onChange={e => setTeachers(Number(e.target.value))} className="form-input" required />
+                  <label className="form-label">O&apos;qituvchilar soni</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={teachers}
+                    onChange={e => setTeachers(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="form-label">OTMga kirish %</label>
-                  <input type="number" value={collegeAdmissionPercent} onChange={e => setCollegeAdmissionPercent(Number(e.target.value))} className="form-input" />
+                  <label className="form-label">OTMga kirish ko&apos;rsatkichi (%)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={collegeAdmissionPercent}
+                    onChange={e => setCollegeAdmissionPercent(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
                 </div>
               </div>
+
+              <AttachmentUploader
+                attachment={attachment}
+                onChange={setAttachment}
+                label="Asoslovchi hisobot fayli (PDF/Excel)"
+              />
+
+              {!editingItem && (
+                <div className="flex items-center gap-2 p-3 bg-blue-50/60 border border-blue-200 rounded-xl text-xs text-blue-900">
+                  <input
+                    type="checkbox"
+                    id="draftEdu"
+                    checked={sendToDraft}
+                    onChange={e => setSendToDraft(e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="draftEdu" className="cursor-pointer">
+                    Qoralama sifatida yuborish (Tasdiqlash navbatiga qo&apos;shish)
+                  </label>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-outline flex-1">Bekor qilish</button>
-                <button type="submit" className="btn-primary flex-1">Saqlash</button>
+                <button type="button" onClick={() => setShowModal(false)} className="btn-outline flex-1">
+                  Bekor qilish
+                </button>
+                <button type="submit" className="btn-primary flex-1">
+                  {editingItem ? "Yangilash" : sendToDraft ? "Qoralamaga yuborish" : "Saqlash"}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <DocumentViewerModal
+        attachment={viewerAttachment}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
     </div>
   );
 }

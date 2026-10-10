@@ -12,7 +12,6 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronLeft,
-  ChevronRight as ChevronRightIcon,
   Receipt,
   Briefcase,
   Store,
@@ -205,7 +204,12 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['economy', 'social', 'construction', 'agriculture']);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([
+    'economy',
+    'social',
+    'construction',
+    'agriculture',
+  ]);
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus(prev =>
@@ -281,17 +285,23 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
 
   const sidebarContent = (
     <>
-      <div className={clsx(
-        'flex items-center gap-3 px-4 py-5 border-b border-gray-700/50',
-        collapsed && 'justify-center px-2'
-      )}>
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
-          <LayoutDashboard size={22} className="text-white" />
+      <div
+        className={clsx(
+          'flex items-center gap-3 px-4 py-5 border-b border-gray-700/50 bg-[#0c1322]',
+          collapsed && 'justify-center px-2'
+        )}
+      >
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20 border border-blue-400/20">
+          <Building2 size={22} className="text-white" />
         </div>
         {!collapsed && (
-          <div>
-            <h1 className="text-white font-bold text-lg leading-tight">E-Boshqaruv</h1>
-            <p className="text-gray-400 text-[10px] leading-tight">Elektron Hokimiyat Tizimi</p>
+          <div className="overflow-hidden">
+            <h1 className="text-white font-black text-sm tracking-wide leading-tight truncate">
+              ANGOR TUMAN HOKIMIYATI
+            </h1>
+            <p className="text-blue-300/70 text-[10px] font-medium leading-tight truncate mt-0.5">
+              Raqamli hokimlik portali
+            </p>
           </div>
         )}
       </div>
@@ -306,7 +316,7 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
           className="sidebar-item w-full justify-center"
         >
           {collapsed ? (
-            <ChevronRightIcon size={20} />
+            <ChevronRight size={20} />
           ) : (
             <>
               <ChevronLeft size={20} />
@@ -336,7 +346,7 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
 
       <aside
         className={clsx(
-          'fixed top-0 left-0 h-screen bg-[#0f172a] flex flex-col z-40 transition-all duration-300',
+          'fixed top-0 left-0 h-screen bg-[#0f172a] flex flex-col z-40 transition-all duration-300 border-r border-slate-800',
           collapsed ? 'w-[70px]' : 'w-[260px]',
           'hidden lg:flex'
         )}
@@ -346,7 +356,7 @@ export default function Sidebar({ userRole = 'MAYOR' }: SidebarProps) {
 
       <aside
         className={clsx(
-          'fixed top-0 left-0 h-screen bg-[#0f172a] flex flex-col z-40 w-[260px] transition-transform duration-300 lg:hidden',
+          'fixed top-0 left-0 h-screen bg-[#0f172a] flex flex-col z-40 w-[260px] transition-transform duration-300 lg:hidden border-r border-slate-800',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
